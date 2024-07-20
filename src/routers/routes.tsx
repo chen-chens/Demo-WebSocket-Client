@@ -1,5 +1,5 @@
 import DemoPage from '@/pages/demo'
-import BroadcastPage from '@/pages/broadcast'
+import GlobalBroadcastPage from '@/pages/globalBroadcast'
 import App from '@/App';
 
 const routes = [
@@ -12,8 +12,8 @@ const routes = [
     element: <DemoPage />,
   },
   {
-    path: '/broadcast',
-    element: <BroadcastPage />,
+    path: '/globalBroadcast',
+    element: <GlobalBroadcastPage />,
   },
 ];
 
