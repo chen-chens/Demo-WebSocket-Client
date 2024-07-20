@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import './App.css'
-import { Button } from '@mui/material'
-import { Outlet } from 'react-router-dom'
+import { Button, TextField } from '@mui/material'
+import { Outlet, Link } from 'react-router-dom'
 import socket from './socket'
 
 function App() {
@@ -38,12 +38,21 @@ function App() {
       <h1>WebSocket Demo</h1>
       <section className="card">
         <h2>系列一：推播範圍</h2>
+        <Link to={'/broadcast'}>Broad</Link>
+
         <Button variant="contained" color="primary" onClick={handleSocketConnection}>
           進入聊天室
         </Button>
         <Button variant="contained" color="primary" onClick={handleSend}>
           發送訊息
         </Button>
+        <TextField
+          variant="standard"
+          label="Message"
+          // value={globalMessage}
+          // onChange={(e) => setGlobalMessage(e.target.value)}
+          fullWidth
+        />
       </section>
       <main>
         <Outlet />
