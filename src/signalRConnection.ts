@@ -6,7 +6,7 @@ export const createConnection = (): HubConnection => {
     if(connection === null){
         // 初始化連線對象
         connection = new HubConnectionBuilder()
-            .withUrl('http://localhost:5000/chathub') // 後端 WebSocket Server 位置
+            .withUrl('http://localhost:5230/chathub', { withCredentials: true }) // 後端 WebSocket Server 位置
             .withAutomaticReconnect()
             .build();
     }
