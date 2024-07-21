@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
-import { Button, TextField } from '@mui/material'
+import { Box, Button, Card, Container, Divider, Grid, List, ListItem, TextField, Typography } from '@mui/material'
 import { Outlet, Link } from 'react-router-dom'
 import { HubConnection } from '@microsoft/signalr'
 import { createConnection } from './signalRConnection'
@@ -18,9 +18,10 @@ function App() {
   const [connection, setConnection] = useState<HubConnection|null>(null);
   const [connectionStatus, setConnectionStatus] = useState(false);
 
-  const [globalMessage, setGlobalMessage] = useState<MessageType>();
-  const [groupMessage, setGroupMessage] = useState<MessageType>();
-  const [privateMessage, setPrivateMessage] = useState<MessageType>();
+  // 訊息輸入：
+  const [globalMessage, setGlobalMessage] = useState('');
+  const [groupMessage, setGroupMessage] = useState('');
+  const [privateMessage, setPrivateMessage] = useState('');
 
   // 紀錄訊息列表：
   const [globalMessages, setGlobalMessages] = useState<MessageType[]>([]);
@@ -32,7 +33,7 @@ function App() {
     try{
       const initConnection = createConnection();
       setConnection(initConnection);
-
+      // 建立連線
       await initConnection.start();
       console.log("SignalR connects successfully!");
       setConnectionStatus(true);
@@ -70,7 +71,7 @@ function App() {
     if(!connectionStatus || !connection){
       return;
     }
-    
+
     const handleGlobalMessage = (user: string, data: string) => {
       const record = JSON.parse(data);
       setGlobalMessages(prev => [...prev, { user, ...record }]);
@@ -96,9 +97,11 @@ function App() {
     connection.on('Receive: privateMessage', handlePrivateMessage)
 
     return () => {
+      // 停止監聽
       connection.off('Receive: globalMessage', handleGlobalMessage)
       connection.off('Receive: groupMessage', handleGroupMessage)
       connection.off('Receive: privateMessage', handlePrivateMessage)
+      // 關閉連線
       connection.stop();
     }
   }, [connectionStatus])
@@ -107,23 +110,65 @@ function App() {
     <>
       <h1>WebSocket Demo</h1>
       <section className="card">
-        <h2>系列一：推播範圍</h2>
-        <Link to={'/broadcast'}>Broad</Link>
+        {/* <h2>系列一：推播範圍</h2> */}
+        {/* <Link to={'/broadcast'}>Broad</Link> */}
 
         <Button variant="contained" color="primary" onClick={handleConnection}>
           進入聊天室
         </Button>
-        <Button variant="contained" color="primary" onClick={handleSend}>
-          發送訊息
-        </Button>
-        <TextField
-          variant="standard"
-          label="Message"
-          // value={globalMessage}
-          // onChange={(e) => setGlobalMessage(e.target.value)}
-          fullWidth
-        />
+        <h3>目前連線狀態：{connectionStatus ? "連線中" : "尚未連線"}</h3>
       </section>
+      <Divider />
+
+      <Container>
+        <Grid container spacing={10} p={2}>
+          <Grid item xs={12} md={6}>
+            <Box mb={5} p={1}>
+              {/* Global Broadcast */}
+              <Typography variant="h4" gutterBottom>
+                Global Broadcast
+              </Typography>
+  
+              <TextField
+                variant="standard"
+                label="Message"
+                value={globalMessage}
+                onChange={(e) => setGlobalMessage(e.target.value)}
+                fullWidth
+              />
+              <Button onClick={handleSend} variant="contained" color="primary">
+                發送訊息
+              </Button>
+              
+            </Box>
+          </Grid>
+
+          {/* Messages Display */}
+          <Grid item xs={12} md={6}>
+            <Card>
+
+                <Card key={123} variant="outlined" style={{margin: 10}}>
+                    <p>
+                      [2024-10-28] User : Content
+                      / <span>{new Date().getTime()}</span>
+                    </p>
+                </Card>
+
+                {globalMessages.map((item, index) => (
+                  <Card key={index} variant="outlined">
+                    <p>
+                      [{item.time}] {item.user} : {item.content}
+                      / <span>{item.traceId}</span>
+                    </p>
+                  </Card>
+                ))}
+
+            </Card>
+          </Grid>
+          
+        </Grid>
+      </Container>
+
       <main>
         <Outlet />
       </main>
