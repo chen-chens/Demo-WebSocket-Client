@@ -11,7 +11,7 @@ interface MessageType {
   user: string;
   traceId: string;
   content: string;
-  time: string;
+  createdTime: string;
 }
 function App() {
   const [loading, setLoading] = useState(false);
@@ -34,8 +34,8 @@ function App() {
       const initConnection = createConnection();
       setConnection(initConnection);
       // 建立連線
-      await initConnection.start();
-      console.log("SignalR connects successfully!");
+      const con = await initConnection.start();
+      console.log("SignalR connects successfully!", con);
       setConnectionStatus(true);
     }catch(error){
       console.log("handleConnection Fail: ", error);
@@ -54,13 +54,15 @@ function App() {
     
     try{
       // Send Message To Server
-      const message = JSON.stringify({
-        traceId: new Date().getTime(),
-        content: "抓 input 資料！",
-        time: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-      });
+      const message: MessageType = {
+        user: "Joanna",
+        traceId: `${new Date().getTime()}`,
+        content: globalMessage,
+        createdTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+      };
 
-      await connection.send('message', "userA", message);
+      await connection.invoke('SendMessage', message);
+      setGlobalMessage('');
     }catch(error){
       console.log("HandleSend Fail: ", error);
       alert("Send Message failurely!");
@@ -72,9 +74,9 @@ function App() {
       return;
     }
 
-    const handleGlobalMessage = (user: string, data: string) => {
+    const handleGlobalMessage = (data: string) => {
       const record = JSON.parse(data);
-      setGlobalMessages(prev => [...prev, { user, ...record }]);
+      setGlobalMessages(prev => [...prev, { ...record }]);
     };
 
     const handleGroupMessage = (user: string, data: string) => {
@@ -88,7 +90,7 @@ function App() {
     };
 
     // 建立監聽：GlobalMessage
-    connection.on('Receive: globalMessage', handleGlobalMessage)
+    connection.on('GlobalMessage', handleGlobalMessage)
 
     // 建立監聽：GroupMessage
     connection.on('Receive: groupMessage', handleGroupMessage)
@@ -155,11 +157,9 @@ function App() {
                 </Card>
 
                 {globalMessages.map((item, index) => (
-                  <Card key={index} variant="outlined">
-                    <p>
-                      [{item.time}] {item.user} : {item.content}
-                      / <span>{item.traceId}</span>
-                    </p>
+                  <Card key={index} variant="outlined" style={{margin: 10, padding: 10}}>
+                    <h4>[{item.createdTime}] {item.user} : {item.content}</h4>
+                    <span>TraceId: {item.traceId}</span>
                   </Card>
                 ))}
 
