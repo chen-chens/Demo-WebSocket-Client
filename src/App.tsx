@@ -1,53 +1,14 @@
-import { useEffect, useState } from 'react'
 import './App.css'
-import { Box, Button, Card, CardContent, Container, Divider, Grid, TextField, Typography } from '@mui/material'
-import { Outlet, Link, useNavigate } from 'react-router-dom'
-import { HubConnection } from '@microsoft/signalr'
-import { createConnection } from './signalRConnection'
-import { BaseObject } from './types'
-
-import CatIcon from '/cat.svg'; 
-import DogIcon from '/dog.svg'; 
+import { useState } from 'react'
+import { Box, Button, Card, CardContent, Container, Grid, TextField, Typography } from '@mui/material'
+import { Outlet, useNavigate } from 'react-router-dom'
+import { groupList } from './mock'
 
 function App() {
-  const groupList = [
-    {
-      id: "cat",
-      name: "貓派",
-      icon: CatIcon
-    },
-    {
-      id: "dog",
-      name: "狗派",
-      icon: DogIcon
-    },
-  ];
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [connection, setConnection] = useState<HubConnection|null>(null);
-  const [connectionStatus, setConnectionStatus] = useState(false);
 
   const [currentUser, setCurrentUser] = useState('');
-  const [currentGroups, setCurrentGroups] = useState<BaseObject[]>([]);
-
-
-  const handleConnection = async() => {
-    setLoading(true);
-    try{
-      const initConnection = createConnection();
-      setConnection(initConnection);
-      // 建立連線
-      const con = await initConnection.start();
-      console.log("SignalR connects successfully!", con);
-      setConnectionStatus(true);
-    }catch(error){
-      console.log("handleConnection Fail: ", error);
-      setConnectionStatus(false);
-      alert("SignalR connects failurely!");
-    }finally{
-      setLoading(false);
-    }
-  }
+  const [currentGroupIds, setCurrentGroupIds] = useState<string[]>([]);
 
   return (
     <>
@@ -72,7 +33,7 @@ function App() {
                   <Typography variant='h4' gutterBottom>{item.name}</Typography>
              
                   {
-                      currentGroups.some(group => group.id === item.id)
+                      currentGroupIds.some(groupId => groupId === item.id)
                       ? (
                           <Button 
                             variant="contained"
@@ -82,7 +43,7 @@ function App() {
                           </Button>
                       ) : (
                           <Button 
-                            onClick={() => setCurrentGroups([...currentGroups, item])} 
+                            onClick={() => setCurrentGroupIds([...currentGroupIds, item.id])} 
                             variant="outlined"
                             color="success"
                           >
@@ -101,7 +62,7 @@ function App() {
           fullWidth
           variant="contained" 
           color="inherit" 
-          onClick={() => navigate('/demo')}
+          onClick={() => navigate(`/demo?name=${currentUser}&groups=${currentGroupIds.join(",")}`)}
         >
           進入聊天室
         </Button>
