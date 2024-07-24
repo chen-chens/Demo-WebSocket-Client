@@ -1,6 +1,7 @@
 import DemoPage from '@/pages/demo'
 import BroadcastPage from '@/pages/broadcast'
 import App from '@/App';
+import DemoAPage from '@/pages/demoA';
 
 const routes = [
   {
@@ -10,6 +11,10 @@ const routes = [
   {
     path: '/demo',
     element: <DemoPage />,
+  },
+  {
+    path: '/demoA',
+    element: <DemoAPage />,
   },
   {
     path: '/broadcast',

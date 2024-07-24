@@ -5,7 +5,8 @@ import { HubConnection } from '@microsoft/signalr'
 import { createConnection } from '@/signalRConnection'
 import ChatList from '@/components/chatList'
 import { BaseObject, BroadCastType, GroupMessageType, MessageType, PrivateMessageType } from '@/types'
-import SendIcon from '@mui/icons-material/Send';
+import {Send as SendIcon, Search as SearchIcon} from '@mui/icons-material';
+import { Search, SearchIconWrapper } from '@mui/icons-material'
 
 function DemoPage() {
   const groupList = [
@@ -182,59 +183,56 @@ function DemoPage() {
 
   return (
     <>
-      <h1>WebSocket Demo</h1>
       <h3>目前連線狀態：{connectionStatus ? "連線中" : "尚未連線"}</h3>
 
       <Container>
-        {/* <h2>系列一：推播範圍</h2> */}
-        {/* <Link to={'/broadcast'}>Broad</Link> */}
-
         <TextField
           variant="outlined"
-          label="Name"
-          value={currentUser}
-          onChange={(e) => setCurrentUser(e.target.value)}
-          
+          value={""}
+          size="small"
+          onChange={() => {}}
         />
         <Button variant="contained" color="primary" onClick={handleConnection} >
-          加入
+          建立連線
         </Button>
-        <Container>
-        <Grid container spacing={10} p={2}>
-          {groupList.map(item => (
-            <Grid item xs={12} md={6} key={item.id}>
-              <Card variant="elevation" style={{margin: 10, padding: 10}}>
-                <h4>{item.name}</h4>
-
-                <Button 
-                  onClick={() => handleJoinGroup(item.id)} 
-                  variant="contained"
-                  color="success"
-                >
-                  加入群組
-                </Button>
-
-                <Button 
-                  onClick={() => handleLeaveGroup(item.id)} 
-                  variant="contained"
-                  color="warning"
-                >
-                  離開群組
-                </Button>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-        </Container>
       </Container>
+
+      {/* 群組 */}
+      {/* <Container>
+          <Grid container spacing={10} p={2}>
+            {groupList.map(item => (
+              <Grid item xs={12} md={6} key={item.id}>
+                <Card variant="elevation" style={{margin: 10, padding: 10}}>
+                  <h4>{item.name}</h4>
+
+                  <Button 
+                    onClick={() => handleJoinGroup(item.id)} 
+                    variant="contained"
+                    color="success"
+                  >
+                    加入群組
+                  </Button>
+
+                  <Button 
+                    onClick={() => handleLeaveGroup(item.id)} 
+                    variant="contained"
+                    color="warning"
+                  >
+                    離開群組
+                  </Button>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+      </Container> */}
 
       <Divider />
 
+      {/* Global Broadcast */}
       <Container>
         <Grid container spacing={10} p={2}>
           <Grid item xs={12} md={6}>
             <Box mb={5} p={1}>
-              {/* Global Broadcast */}
               <Typography variant="h4" gutterBottom>
                 Global Broadcast
               </Typography>
@@ -270,11 +268,11 @@ function DemoPage() {
 
       <Divider />
 
+      {/* Group Broadcast */}
       <Container>
         <Grid container spacing={10} p={2}>
           <Grid item xs={12} md={6}>
           <Box mb={5}>
-              {/* Group Broadcast */}
               <Typography variant="h4">Group Broadcast</Typography>
               <FormControl fullWidth>
                   <InputLabel>Group</InputLabel>
