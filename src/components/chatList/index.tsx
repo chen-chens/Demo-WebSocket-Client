@@ -1,5 +1,5 @@
 import { BroadCastType, MessageType } from "@/types";
-import { Card } from "@mui/material";
+import { Card, Typography } from "@mui/material";
 
 export interface ChatListProps {
     type: BroadCastType;
@@ -8,9 +8,9 @@ export interface ChatListProps {
 export default function ChatList(props: ChatListProps){
 
     return(
-        <Card>
-            <Card key={123} variant="outlined" style={{margin: 10}}>
-                <h2>{props.type}</h2>
+        <Card sx={{height: "calc(100vh - 64px)"}}>
+            <Card key={123} variant="elevation">
+                <Typography variant="h5" py={1}>{props.type}</Typography>
             </Card>
 
             {props.messages.map((item, index) => (
