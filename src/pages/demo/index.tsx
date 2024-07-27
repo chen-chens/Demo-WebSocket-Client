@@ -6,7 +6,6 @@ import { createConnection } from '@/signalRConnection'
 import ChatList from '@/components/chatList'
 import { BaseObject, BroadCastType, GroupMessageType, MessageType, PrivateMessageType } from '@/types'
 import {Send as SendIcon, Search as SearchIcon} from '@mui/icons-material';
-import { Search, SearchIconWrapper } from '@mui/icons-material'
 
 function DemoPage() {
   const groupList = [
