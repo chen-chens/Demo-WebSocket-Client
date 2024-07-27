@@ -7,19 +7,26 @@ import {
   ExpandMore
 } from '@mui/icons-material';
 import ChatList from '@/components/chatList';
-import { BroadCastType, GroupMessageType, MessageType, PrivateMessageType } from '@/types';
+import { BroadCastType, GroupMessageType, MessageType, OnlineUserInfo, PrivateMessageType } from '@/types';
 import PublicIcon from '@mui/icons-material/Public';
 import GroupsIcon from '@mui/icons-material/Groups';
 import PersonIcon from '@mui/icons-material/Person';
 import { useLocation, useNavigate } from 'react-router-dom';
 import qs from 'qs';
-import { createConnection } from '@/signalRConnection';
 import handleBasicMessage from '@/utils/handleBasicMessage';
-import { HubConnection } from '@microsoft/signalr';
+import { HubConnectionState } from '@microsoft/signalr';
+import { useConnection } from '@/contexts/ConnectionProvider';
+import { v4 as uuidv4 } from 'uuid';
 
 function DemoAPage() {
+  const initUser: OnlineUserInfo = {
+    id: uuidv4(),
+    name: '個人訊息',
+    groups: ['cat', 'dog']
+  };
   const navigate = useNavigate();
   const location = useLocation();
+  const { connection, connectionState } = useConnection();
   const {name, groups} = qs.parse(location.search, { ignoreQueryPrefix: true, comma: true });
 
   // 側邊欄：
@@ -28,12 +35,9 @@ function DemoAPage() {
   const [selectedBroadCast, setSelectedBroadCast] = useState<BroadCastType>(BroadCastType.GLOBAL);
   const [selectedTarget, setSelectedTarget] = useState<string>();
   
-  const [onlineUsers, setOnlineUsers] = useState<string[]>(["個人訊息"]);
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUserInfo[]>([initUser]);
   const [currentGroups, setCurrentGroups] = useState<string[]>([]);
-
-  // 連線：
-  const [connection, setConnection] = useState<HubConnection|null>(null);
-  const [connectionStatus, setConnectionStatus] = useState(false);
+  const [notice, setNotice] = useState<string>();
 
   // 訊息輸入：
   const [currentMessage, setCurrentMessage] = useState('');
@@ -65,8 +69,19 @@ function DemoAPage() {
   };
 
   const switchMessageView = () => {
+    switch(selectedBroadCast){
+      case BroadCastType.GLOBAL:
+        return globalMessages;
 
-    return [];
+      case BroadCastType.GROUP:
+        return groupMessages;
+
+      case BroadCastType.PRIVATE:
+        return privateMessages;
+
+      default:
+        return [];
+    }
   }
 
   // 切換發送訊息
@@ -113,7 +128,7 @@ function DemoAPage() {
   // }
 
   const handleSendGlobalMessage = async () => {
-    if(!connectionStatus || !connection){
+    if(!connection || connectionState !== HubConnectionState.Connected){
       alert("尚未進入聊天室！");
       return;
     }
@@ -140,51 +155,36 @@ function DemoAPage() {
     }
   }, [location.search])
 
-  // 建立連線：
   useEffect(() => {
-    const handleConnection = async() => {
-      try{
-        const initConnection = createConnection();
-        setConnection(initConnection);
-        // 建立連線
-        const con = await initConnection.start();
-        console.log("SignalR connects successfully!", con);
-        setConnectionStatus(true);
-      }catch(error){
-        console.log("handleConnection Fail: ", error);
-        setConnectionStatus(false);
-        alert("SignalR connects failurely!");
-      }
-    };
-
-    handleConnection();
-
-    return () => {
-
-    }
-  }, [])
-
-  useEffect(() => {
-    if(!connectionStatus || !connection){
+    if(!connection || connectionState !== HubConnectionState.Connected){
       return;
     }
 
+    const handleOnlineUsers = (data: string) => {
+      const record: OnlineUserInfo = JSON.parse(data);
+      setOnlineUsers(prev => [...prev, record]);
+      setNotice(`${record.name} 加入聊天室！`);
+    };
+
     const handleGlobalMessage = (data: string) => {
       const record = JSON.parse(data);
-      setGlobalMessages(prev => [...prev, { ...record }]);
+      setGlobalMessages(prev => [...prev, record]);
     };
 
     const handleGroupMessage = (data: string) => {
       console.log("🚀 ~ handleGroupMessage ~ data:", data)
       const record = JSON.parse(data);
-      setGroupMessages(prev => [...prev, { ...record }]);
+      setGroupMessages(prev => [...prev, record]);
     };
 
     const handlePrivateMessage = (data: string) => {
       const record = JSON.parse(data);
-      setPrivateMessages(prev => [...prev, { ...record }]);
+      setPrivateMessages(prev => [...prev, record]);
     };
 
+    // 建立監聽：其他人加入聊天室
+    connection.on('UserLogIn', handleOnlineUsers)
+    
     // 建立監聽：GlobalMessage
     connection.on('GlobalMessage', handleGlobalMessage)
 
@@ -196,13 +196,12 @@ function DemoAPage() {
 
     return () => {
       // 停止監聽
+      connection.off('UserLogIn', handleOnlineUsers)
       connection.off('GlobalMessage', handleGlobalMessage)
       connection.off('GroupMessage', handleGroupMessage)
       connection.off('PrivateMessage', handlePrivateMessage)
-      // 關閉連線
-      connection.stop();
     }
-  }, [connectionStatus])
+  }, [connection, connectionState])
 
 
   return (
@@ -301,8 +300,8 @@ function DemoAPage() {
               <Collapse in={privateOpen} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
                   {onlineUsers.map(item => (
-                    <ListItemButton onClick={() => switchChannel(BroadCastType.PRIVATE, item)}>
-                      <ListItemText primary={item} inset />
+                    <ListItemButton onClick={() => switchChannel(BroadCastType.PRIVATE, item.name)}>
+                      <ListItemText primary={item.name} inset />
                     </ListItemButton>
                   ))}
                 </List>
@@ -315,6 +314,7 @@ function DemoAPage() {
           <ChatList
             type={selectedBroadCast}
             title={selectedTarget}
+            notice={notice}
             messages={switchMessageView()}
           />
 

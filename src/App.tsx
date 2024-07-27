@@ -3,12 +3,37 @@ import { useState } from 'react'
 import { Box, Button, Card, CardContent, Container, Grid, TextField, Typography } from '@mui/material'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { groupList } from './mock'
+import { useConnection } from './contexts/ConnectionProvider'
+import { HubConnectionState } from '@microsoft/signalr'
+import { OnlineUserInfo } from './types'
+import { v4 as uuidv4 } from 'uuid';
 
 function App() {
   const navigate = useNavigate();
-
+  const { connection, connectionState } = useConnection();
   const [currentUser, setCurrentUser] = useState('');
   const [currentGroupIds, setCurrentGroupIds] = useState<string[]>([]);
+
+  const handleEnterChatRoom = async () => {
+    try{
+      if(!connection || connectionState !== HubConnectionState.Connected){
+        alert("尚未建立連線！");
+        return;
+      }
+
+      const userInfo: OnlineUserInfo = {
+        id: uuidv4(),
+        name: currentUser,
+        groups: currentGroupIds,
+      };
+
+      await connection.invoke("NoticeUserLogIn", userInfo);
+      navigate(`/demo?name=${currentUser}&groups=${currentGroupIds.join(",")}`);
+    }catch(error){
+      console.log("handleEnterChatRoom error: ", error);
+      alert("進入聊天室失敗！")
+    }
+  }
 
   return (
     <>
@@ -62,7 +87,7 @@ function App() {
           fullWidth
           variant="contained" 
           color="inherit" 
-          onClick={() => navigate(`/demo?name=${currentUser}&groups=${currentGroupIds.join(",")}`)}
+          onClick={() => handleEnterChatRoom()}
         >
           進入聊天室
         </Button>

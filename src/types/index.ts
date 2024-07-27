@@ -25,3 +25,10 @@ export interface BaseObject {
     id: string;
     name: string;
 }
+
+export interface OnlineUserInfo {
+    id: string;
+    name: string;
+    avator?: string;
+    groups: string[];
+}

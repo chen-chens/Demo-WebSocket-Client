@@ -8,6 +8,7 @@ import PersonIcon from '@mui/icons-material/Person';
 export interface ChatListProps {
     type: BroadCastType;
     title?: string;
+    notice?: string;
     messages: MessageType[];
 }
 export default function ChatList(props: ChatListProps){
@@ -27,7 +28,11 @@ export default function ChatList(props: ChatListProps){
             </Card>
 
             <Divider />
-
+            {   props.notice &&
+                <Typography variant="subtitle2" py={1} mb={1}>
+                    通報：{props.notice}
+                </Typography>
+            }
             {props.messages.map((item, index) => (
                 <Card key={index} variant="outlined" style={{margin: 10, padding: 10}}>
                     <h4>[{item.createdTime}] {item.user} : {item.content}</h4>
