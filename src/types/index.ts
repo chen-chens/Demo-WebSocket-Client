@@ -5,7 +5,8 @@ export enum BroadCastType {
 }
 
 export interface MessageType {
-    user: string;
+    fromUser: string;
+    fromUserId: string;
     traceId: string;
     content: string;
     createdTime: string;
@@ -17,12 +18,16 @@ export interface GroupMessageType extends MessageType {
 }
 
 export interface PrivateMessageType extends MessageType {
-    targetName: string;
-    targetId: string;
+    toUserName?: string;
+    toUserId: string;
 }
 
 export interface GroupMessageListType {
     [key: string]: GroupMessageType[];
+}
+
+export interface PrivateMessageListType {
+    [key: string]: PrivateMessageType[];
 }
 
 export interface BaseObject {

@@ -43,7 +43,7 @@ function App() {
 
       await connection.invoke("NoticeUserLogIn", userInfo);
       await handleJoinGroup(currentGroupIds);
-      navigate(`/demoA?name=${currentUser}&groups=${currentGroupIds.join(",")}`);
+      navigate(`/demoA?userName=${currentUser}&userId=${uuidv4()}&groups=${currentGroupIds.join(",")}`);
     }catch(error){
       console.log("handleEnterChatRoom error: ", error);
       alert("進入聊天室失敗！")

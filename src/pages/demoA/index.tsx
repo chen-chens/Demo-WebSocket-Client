@@ -7,7 +7,7 @@ import {
   ExpandMore
 } from '@mui/icons-material';
 import ChatList from '@/components/chatList';
-import { BroadCastType, GroupMessageListType, GroupMessageType, MessageType, OnlineUserInfo, PrivateMessageType } from '@/types';
+import { BroadCastType, GroupMessageListType, GroupMessageType, MessageType, OnlineUserInfo, PrivateMessageListType, PrivateMessageType } from '@/types';
 import PublicIcon from '@mui/icons-material/Public';
 import GroupsIcon from '@mui/icons-material/Groups';
 import PersonIcon from '@mui/icons-material/Person';
@@ -27,13 +27,14 @@ function DemoAPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { connection, connectionState } = useConnection();
-  const {name, groups} = qs.parse(location.search, { ignoreQueryPrefix: true, comma: true });
+  const {userName, userId, groups} = qs.parse(location.search, { ignoreQueryPrefix: true, comma: true });
 
   // 側邊欄：
   const [groupOpen, setGroupOpen] = useState(true);
   const [privateOpen, setPrivateOpen] = useState(true);
   const [selectedBroadCast, setSelectedBroadCast] = useState<BroadCastType>(BroadCastType.GLOBAL);
   const [selectedTarget, setSelectedTarget] = useState<string>();
+  console.log("🚀 ~ DemoAPage ~ selectedTarget:", selectedTarget)
   
   const [onlineUsers, setOnlineUsers] = useState<OnlineUserInfo[]>([initUser]);
   const [currentGroups, setCurrentGroups] = useState<string[]>([]);
@@ -45,10 +46,11 @@ function DemoAPage() {
   // 紀錄訊息列表：
   const [globalMessages, setGlobalMessages] = useState<MessageType[]>([]);
   const [groupMessages, setGroupMessages] = useState<GroupMessageListType>({});
-  const [privateMessages, setPrivateMessages] = useState<PrivateMessageType[]>([]);
+  const [privateMessages, setPrivateMessages] = useState<PrivateMessageListType>({});
 
   // 切換聊天室
   const switchChannel = (type: BroadCastType, child?: string) => {
+    console.log("🚀 ~ switchChannel ~ child:", child)
     if(child){
       setSelectedTarget(child);
     }else{
@@ -77,7 +79,7 @@ function DemoAPage() {
         return groupMessages[targetId];
 
       case BroadCastType.PRIVATE:
-        return privateMessages;
+        return privateMessages[targetId];
 
       default:
         return [];
@@ -92,11 +94,33 @@ function DemoAPage() {
       break;
 
       case BroadCastType.PRIVATE:
-
+        handleSendPrivateMessage();
       break;
 
       default:
         handleSendGlobalMessage();
+    }
+  }
+
+  const handleSendPrivateMessage = async () => {
+    if(!connection || connectionState !== HubConnectionState.Connected){
+      alert("尚未進入聊天室！");
+      return;
+    }
+
+    try{
+      const basicMessage = handleBasicMessage(`${userName}`, `${userId}`, currentMessage);
+      const message: PrivateMessageType = {
+        ...basicMessage,
+        // toUserName: currentGroup.name,
+        toUserId: selectedTarget||"",
+      };
+      await connection.invoke('SendPrivateMessage', selectedTarget||"", message);
+
+      setCurrentMessage('');
+    }catch(error){
+      console.log("handleSendPrivateMessage error: ", error);
+      alert("Send Private Message failurely!");
     }
   }
 
@@ -111,7 +135,7 @@ function DemoAPage() {
     }
 
     try{
-      const basicMessage = handleBasicMessage(`${name}`, currentMessage);
+      const basicMessage = handleBasicMessage(`${userName}`, `${userId}`, currentMessage);
       const message: GroupMessageType = {
         ...basicMessage,
         // groupName: currentGroup.name,
@@ -134,7 +158,7 @@ function DemoAPage() {
     
     try{
       // Send Message To Server
-      const message: MessageType = handleBasicMessage(`${name}`, currentMessage);
+      const message: MessageType = handleBasicMessage(`${userName}`, `${userId}`, currentMessage);
       await connection.invoke('SendGlobalMessage', message);
 
       setCurrentMessage('');
@@ -163,6 +187,10 @@ function DemoAPage() {
         initGroupMessages[id] = []
       })
       setGroupMessages(initGroupMessages);
+
+      setPrivateMessages({
+          [`${userId}`]: []
+      });
     }
   }, [location.search])
 
@@ -175,6 +203,14 @@ function DemoAPage() {
       const record: OnlineUserInfo = JSON.parse(data);
       setOnlineUsers(prev => [...prev, record]);
       setNotice(`${record.name} 加入聊天室！`);
+
+      setPrivateMessages((prev) => {
+        return({
+          ...prev,
+          [record.id]: [],
+          [`${userId}`]: []
+        })
+      });
     };
 
     const handleGlobalMessage = (data: string) => {
@@ -199,8 +235,17 @@ function DemoAPage() {
     };
 
     const handlePrivateMessage = (data: string) => {
-      const record = JSON.parse(data);
-      setPrivateMessages(prev => [...prev, record]);
+      const record: PrivateMessageType = JSON.parse(data);
+      setPrivateMessages(prev => {
+        if(prev && prev[record.fromUserId]){
+          prev[record.toUserId].push(record);
+          return ({...prev});
+        }
+        else{
+          prev[record.fromUserId] = [record];
+          return ({...prev});
+        }
+      });
     };
 
     // 建立監聽：其他人加入聊天室
@@ -315,7 +360,7 @@ function DemoAPage() {
               <Collapse in={privateOpen} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
                   {onlineUsers.map(item => (
-                    <ListItemButton key={item.id} onClick={() => switchChannel(BroadCastType.PRIVATE, item.name)}>
+                    <ListItemButton key={item.id} onClick={() => switchChannel(BroadCastType.PRIVATE, item.id)}>
                       <ListItemText primary={item.name} inset />
                     </ListItemButton>
                   ))}
