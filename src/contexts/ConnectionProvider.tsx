@@ -25,38 +25,40 @@ export const ConnectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     useEffect(() => {
         const buildConnection = async () => {
-            if(connection && connectionState !== HubConnectionState.Disconnected) {
-                console.warn("Connection is still!")
-                return;
-            }
-
             const initConnection = createConnection();
             setConnection(initConnection);
 
             // 監聽連線狀態
-            initConnection.onreconnected(() => setConnectionState(HubConnectionState.Reconnecting));
+            initConnection.onreconnecting(() => setConnectionState(HubConnectionState.Reconnecting));
             initConnection.onreconnected(() => setConnectionState(HubConnectionState.Connected));
             initConnection.onclose(() => setConnectionState(HubConnectionState.Disconnected));
-
+    
             try{
                 // 建立連線
                 await initConnection.start();
-                setConnectionState(HubConnectionState.Connecting);
-
+                setConnectionState(HubConnectionState.Connected);
+                alert("WebSocket connection success!");
             }catch(error){
                 console.log("WebSocket connection fail!", error);
                 alert("WebSocket connection fail!");
             }
         }
 
-        buildConnection();
+        if(connectionState !== HubConnectionState.Disconnected) {
+            console.log("Connection is still active!")
+            return;
+        }else{
+            buildConnection();
+        }
 
         return () => {
             if(connection){
                 connection.stop();
+                setConnection(null);
+                setConnectionState(HubConnectionState.Disconnected);
             }
         }
-    }, [connection])
+    }, [connectionState])
 
     return (
         <ConnectionContext.Provider value={{ connection, connectionState }}>
