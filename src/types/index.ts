@@ -12,13 +12,17 @@ export interface MessageType {
 }
 
 export interface GroupMessageType extends MessageType {
-    groupName: string;
+    groupName?: string;
     groupId: string;
 }
 
 export interface PrivateMessageType extends MessageType {
     targetName: string;
     targetId: string;
+}
+
+export interface GroupMessageListType {
+    [key: string]: GroupMessageType[];
 }
 
 export interface BaseObject {

@@ -7,7 +7,7 @@ import {
   ExpandMore
 } from '@mui/icons-material';
 import ChatList from '@/components/chatList';
-import { BroadCastType, GroupMessageType, MessageType, OnlineUserInfo, PrivateMessageType } from '@/types';
+import { BroadCastType, GroupMessageListType, GroupMessageType, MessageType, OnlineUserInfo, PrivateMessageType } from '@/types';
 import PublicIcon from '@mui/icons-material/Public';
 import GroupsIcon from '@mui/icons-material/Groups';
 import PersonIcon from '@mui/icons-material/Person';
@@ -44,7 +44,7 @@ function DemoAPage() {
 
   // 紀錄訊息列表：
   const [globalMessages, setGlobalMessages] = useState<MessageType[]>([]);
-  const [groupMessages, setGroupMessages] = useState<GroupMessageType[]>([]);
+  const [groupMessages, setGroupMessages] = useState<GroupMessageListType>({});
   const [privateMessages, setPrivateMessages] = useState<PrivateMessageType[]>([]);
 
   // 切換聊天室
@@ -68,13 +68,13 @@ function DemoAPage() {
     }
   };
 
-  const switchMessageView = () => {
+  const switchMessageView = (targetId: string = "") => {
     switch(selectedBroadCast){
       case BroadCastType.GLOBAL:
         return globalMessages;
 
       case BroadCastType.GROUP:
-        return groupMessages;
+        return groupMessages[targetId];
 
       case BroadCastType.PRIVATE:
         return privateMessages;
@@ -88,7 +88,7 @@ function DemoAPage() {
   const switchSendMessage = () => {
     switch(selectedBroadCast){
       case BroadCastType.GROUP:
-
+        handleSendGroupMessage();
       break;
 
       case BroadCastType.PRIVATE:
@@ -100,32 +100,31 @@ function DemoAPage() {
     }
   }
 
-  // const handleSendGroupMessage = async () => {
-  //   if(!connectionStatus || !connection){
-  //     alert("尚未進入聊天室！");
-  //     return;
-  //   }
-  //   if(currentGroups.length === 0){
-  //     alert("尚未選擇群組！");
-  //     return;
-  //   }
+  const handleSendGroupMessage = async () => {
+    if(!connection || connectionState !== HubConnectionState.Connected){
+      alert("尚未進入聊天室！");
+      return;
+    }
+    if(currentGroups.length === 0){
+      alert("尚未選擇群組！");
+      return;
+    }
 
-  //   try{
-  //     const basicMessage = handleBasicMessage(`${name}`, groupMessage);
-  //     const message: GroupMessageType = {
-  //       ...basicMessage,
-  //       groupName: currentGroup.name,
-  //       groupId: currentGroup.id,
-  //     };
-  //     await connection.invoke('SendGroupMessage', currentGroup.id, message);
+    try{
+      const basicMessage = handleBasicMessage(`${name}`, currentMessage);
+      const message: GroupMessageType = {
+        ...basicMessage,
+        // groupName: currentGroup.name,
+        groupId: selectedTarget||"",
+      };
+      await connection.invoke('SendGroupMessage', selectedTarget||"", message);
 
-  //     setGroupMessage('');
-  //     setCurrentGroup(undefined);
-  //   }catch(error){
-  //     console.log("handleSendGroupMessage error: ", error);
-  //     alert("Send Group Message failurely!");
-  //   }
-  // }
+      setCurrentMessage('');
+    }catch(error){
+      console.log("handleSendGroupMessage error: ", error);
+      alert("Send Group Message failurely!");
+    }
+  }
 
   const handleSendGlobalMessage = async () => {
     if(!connection || connectionState !== HubConnectionState.Connected){
@@ -147,11 +146,23 @@ function DemoAPage() {
 
   useEffect(() => {
     if(groups){
+      let groupIds = [];
       if(Array.isArray(groups)){
-        setCurrentGroups(groups.map(item => `${item}`));
+        groupIds = groups.map(item => `${item}`);
       }else{
-        setCurrentGroups([`${groups}`])
+        groupIds =[`${groups}`]
       }
+
+      setCurrentGroups(groupIds);
+
+      const initGroupMessages: GroupMessageListType = {};
+      groupIds.forEach(id => {
+        if(initGroupMessages[id]){
+          return;
+        }
+        initGroupMessages[id] = []
+      })
+      setGroupMessages(initGroupMessages);
     }
   }, [location.search])
 
@@ -171,10 +182,20 @@ function DemoAPage() {
       setGlobalMessages(prev => [...prev, record]);
     };
 
+    // 前端沒接收到
     const handleGroupMessage = (data: string) => {
-      console.log("🚀 ~ handleGroupMessage ~ data:", data)
-      const record = JSON.parse(data);
-      setGroupMessages(prev => [...prev, record]);
+      const record: GroupMessageType = JSON.parse(data);
+
+      setGroupMessages(prev => {
+        if(prev && prev[record.groupId]){
+          prev[record.groupId].push(record);
+          return ({...prev});
+        }
+        else{
+          prev[record.groupId] = [record];
+          return ({...prev});
+        }
+      });
     };
 
     const handlePrivateMessage = (data: string) => {
@@ -202,8 +223,7 @@ function DemoAPage() {
       connection.off('PrivateMessage', handlePrivateMessage)
     }
   }, [connection, connectionState])
-
-
+  
   return (
     <>
       <AppBar position="static">
@@ -252,12 +272,7 @@ function DemoAPage() {
               subheader={
                 <ListSubheader component="div" id="nested-list-subheader">
                   <Typography variant="subtitle1" component="span">
-                    目前連線狀態：
-                      {/* {
-                        connectionStatus 
-                        ? "連線中" 
-                        : "尚未連線"
-                      } */}
+                    目前連線狀態：{connectionState}
                   </Typography>
                 </ListSubheader>
               }
@@ -300,7 +315,7 @@ function DemoAPage() {
               <Collapse in={privateOpen} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
                   {onlineUsers.map(item => (
-                    <ListItemButton onClick={() => switchChannel(BroadCastType.PRIVATE, item.name)}>
+                    <ListItemButton key={item.id} onClick={() => switchChannel(BroadCastType.PRIVATE, item.name)}>
                       <ListItemText primary={item.name} inset />
                     </ListItemButton>
                   ))}
@@ -309,13 +324,13 @@ function DemoAPage() {
             </List>
         </Grid>
 
-        {/* Messages Display */}
+    {/* Messages Display */}
         <Grid item xs={12} md={10} style={{position: "relative"}}>
           <ChatList
             type={selectedBroadCast}
             title={selectedTarget}
             notice={notice}
-            messages={switchMessageView()}
+            messages={switchMessageView(selectedTarget)}
           />
 
           <Box sx={{position: "absolute", bottom: 10, left: 20, right: 20, display: "flex"}}>
