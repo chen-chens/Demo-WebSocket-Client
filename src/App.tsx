@@ -14,13 +14,27 @@ function App() {
   const [currentUser, setCurrentUser] = useState('');
   const [currentGroupIds, setCurrentGroupIds] = useState<string[]>([]);
 
-  const handleEnterChatRoom = async () => {
-    try{
-      if(!connection || connectionState !== HubConnectionState.Connected){
-        alert("尚未建立連線！");
-        return;
-      }
+  const handleJoinGroup = async (groupIds: string[]) => {
+    if(!connection || connectionState !== HubConnectionState.Connected){
+      alert("尚未進入聊天室！");
+      return;
+    }
 
+    try{
+      await connection.invoke("JoinGroup", groupIds);
+      alert("JoinGroup: " + groupIds.join(","));
+    }catch(error){
+      console.log("handleJoinGroup error: ", error);
+      alert("Join Group failurely!");
+    }
+  }
+
+  const handleEnterChatRoom = async () => {
+    if(!connection || connectionState !== HubConnectionState.Connected){
+      alert("尚未建立連線！");
+      return;
+    }
+    try{
       const userInfo: OnlineUserInfo = {
         id: uuidv4(),
         name: currentUser,
@@ -28,7 +42,8 @@ function App() {
       };
 
       await connection.invoke("NoticeUserLogIn", userInfo);
-      navigate(`/demo?name=${currentUser}&groups=${currentGroupIds.join(",")}`);
+      await handleJoinGroup(currentGroupIds);
+      navigate(`/demoA?name=${currentUser}&groups=${currentGroupIds.join(",")}`);
     }catch(error){
       console.log("handleEnterChatRoom error: ", error);
       alert("進入聊天室失敗！")
