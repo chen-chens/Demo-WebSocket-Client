@@ -1,5 +1,5 @@
 import { BroadCastType, MessageType } from "@/types";
-import { Card, Chip, Divider, Typography } from "@mui/material";
+import { Box, Card, Chip, Divider, Typography } from "@mui/material";
 import PublicIcon from '@mui/icons-material/Public';
 import GroupsIcon from '@mui/icons-material/Groups';
 import PersonIcon from '@mui/icons-material/Person';
@@ -10,6 +10,10 @@ export interface ChatListProps {
     title?: string;
     notice?: string;
     messages: MessageType[];
+    currentUser: {
+        userId: string;
+        userName: string;
+    }
 }
 export default function ChatList(props: ChatListProps){
     const broadCastIcons = {
@@ -18,27 +22,32 @@ export default function ChatList(props: ChatListProps){
         [BroadCastType.PRIVATE]: <Chip icon={<PersonIcon />} label={BroadCastType.PRIVATE} />,
     }
 
-
     return(
         <Card sx={{height: "calc(100vh - 64px)", textAlign: 'left', p: 2}}>
-            <Card key={123} variant="elevation">
+            <Card key={broadCastIcons[props.type].key} variant="elevation">
                 <Typography variant="h6" py={1} mb={1}>
                     {broadCastIcons[props.type]} {props.title}
                 </Typography>
             </Card>
 
             <Divider />
-            {   props.notice &&
-                <Typography variant="subtitle2" py={1} mb={1}>
-                    通報：{props.notice}
-                </Typography>
-            }
-            {props.messages.map((item, index) => (
-                <Card key={index} variant="outlined" style={{margin: 10, padding: 10}}>
-                    <h4>[{item.createdTime}] {item.user} : {item.content}</h4>
-                    {/* <span>TraceId: {item.traceId}</span> */}
-                </Card>
-            ))}
+            <Box sx={{height: "calc(100vh - 200px)", overflow: "scroll"}}>
+                {   props.notice &&
+                    <Typography variant="subtitle2" py={1} mb={1}>
+                        通報：{props.notice}
+                    </Typography>
+                }
+                {props.messages.map((item) => (
+                    <Card 
+                        key={item.traceId} 
+                        variant="outlined" 
+                        style={{margin: 10, padding: "0px 10px"}}
+                    >
+                        <h4>[{item.createdTime}] {item.fromUserName} : {item.content}</h4>
+                        {/* <span>TraceId: {item.traceId}</span> */}
+                    </Card>
+                ))} 
+            </Box>
         </Card>
     )
 }

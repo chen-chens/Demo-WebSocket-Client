@@ -5,7 +5,7 @@ export enum BroadCastType {
 }
 
 export interface MessageType {
-    fromUser: string;
+    fromUserName: string;
     fromUserId: string;
     traceId: string;
     content: string;

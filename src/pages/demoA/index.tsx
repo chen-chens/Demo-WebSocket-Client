@@ -7,7 +7,7 @@ import {
   ExpandMore
 } from '@mui/icons-material';
 import ChatList from '@/components/chatList';
-import { BroadCastType, GroupMessageListType, GroupMessageType, MessageType, OnlineUserInfo, PrivateMessageListType, PrivateMessageType } from '@/types';
+import { BaseObject, BroadCastType, GroupMessageListType, GroupMessageType, MessageType, OnlineUserInfo, PrivateMessageListType, PrivateMessageType } from '@/types';
 import PublicIcon from '@mui/icons-material/Public';
 import GroupsIcon from '@mui/icons-material/Groups';
 import PersonIcon from '@mui/icons-material/Person';
@@ -17,6 +17,7 @@ import handleBasicMessage from '@/utils/handleBasicMessage';
 import { HubConnectionState } from '@microsoft/signalr';
 import { useConnection } from '@/contexts/ConnectionProvider';
 import { v4 as uuidv4 } from 'uuid';
+import { groupList } from '@/mock';
 
 function DemoAPage() {
   const initUser: OnlineUserInfo = {
@@ -33,11 +34,10 @@ function DemoAPage() {
   const [groupOpen, setGroupOpen] = useState(true);
   const [privateOpen, setPrivateOpen] = useState(true);
   const [selectedBroadCast, setSelectedBroadCast] = useState<BroadCastType>(BroadCastType.GLOBAL);
-  const [selectedTarget, setSelectedTarget] = useState<string>();
-  console.log("🚀 ~ DemoAPage ~ selectedTarget:", selectedTarget)
+  const [selectedTarget, setSelectedTarget] = useState<BaseObject>();
   
   const [onlineUsers, setOnlineUsers] = useState<OnlineUserInfo[]>([initUser]);
-  const [currentGroups, setCurrentGroups] = useState<string[]>([]);
+  const [currentGroups, setCurrentGroups] = useState<BaseObject[]>([]);
   const [notice, setNotice] = useState<string>();
 
   // 訊息輸入：
@@ -46,11 +46,11 @@ function DemoAPage() {
   // 紀錄訊息列表：
   const [globalMessages, setGlobalMessages] = useState<MessageType[]>([]);
   const [groupMessages, setGroupMessages] = useState<GroupMessageListType>({});
+  console.log("🚀 ~ DemoAPage ~ groupMessages:", groupMessages)
   const [privateMessages, setPrivateMessages] = useState<PrivateMessageListType>({});
 
   // 切換聊天室
-  const switchChannel = (type: BroadCastType, child?: string) => {
-    console.log("🚀 ~ switchChannel ~ child:", child)
+  const switchChannel = (type: BroadCastType, child?: BaseObject) => {
     if(child){
       setSelectedTarget(child);
     }else{
@@ -113,7 +113,7 @@ function DemoAPage() {
       const message: PrivateMessageType = {
         ...basicMessage,
         // toUserName: currentGroup.name,
-        toUserId: selectedTarget||"",
+        toUserId: selectedTarget?.id||"",
       };
       await connection.invoke('SendPrivateMessage', selectedTarget||"", message);
 
@@ -138,10 +138,10 @@ function DemoAPage() {
       const basicMessage = handleBasicMessage(`${userName}`, `${userId}`, currentMessage);
       const message: GroupMessageType = {
         ...basicMessage,
-        // groupName: currentGroup.name,
-        groupId: selectedTarget||"",
+        groupName: selectedTarget?.name||"",
+        groupId: selectedTarget?.id||"",
       };
-      await connection.invoke('SendGroupMessage', selectedTarget||"", message);
+      await connection.invoke('SendGroupMessage', selectedTarget?.id||"", message);
 
       setCurrentMessage('');
     }catch(error){
@@ -177,7 +177,11 @@ function DemoAPage() {
         groupIds =[`${groups}`]
       }
 
-      setCurrentGroups(groupIds);
+      setCurrentGroups(groupIds.map(id => ({
+          id, 
+          name: groupList.find(group => group.id === id)?.name||""
+        })
+      ));
 
       const initGroupMessages: GroupMessageListType = {};
       groupIds.forEach(id => {
@@ -214,13 +218,15 @@ function DemoAPage() {
     };
 
     const handleGlobalMessage = (data: string) => {
-      const record = JSON.parse(data);
+      const record: GroupMessageType = JSON.parse(data);
       setGlobalMessages(prev => [...prev, record]);
     };
 
     // 前端沒接收到
     const handleGroupMessage = (data: string) => {
+      console.log("🚀 ~ handleGroupMessage ~ data:", data)
       const record: GroupMessageType = JSON.parse(data);
+      console.log("🚀 ~ handleGroupMessage ~ record:", record)
 
       setGroupMessages(prev => {
         if(prev && prev[record.groupId]){
@@ -288,7 +294,7 @@ function DemoAPage() {
           </Box>
           <Box sx={{display: "flex", alignItems: "center"}}>
             <Typography variant="h6" sx={{mr: 2}}>
-              {`${name}`}
+              {`${userName}`}
             </Typography>
             <Button 
               color="info" 
@@ -340,9 +346,9 @@ function DemoAPage() {
               </ListItemButton>
               <Collapse in={groupOpen} timeout="auto" unmountOnExit>
                 {currentGroups.map(item => (
-                    <List component="div" disablePadding key={`${item}`}>
+                    <List component="div" disablePadding key={`${item.id}`}>
                       <ListItemButton onClick={() => switchChannel(BroadCastType.GROUP, item)}>
-                        <ListItemText primary={`${item}`} inset />
+                        <ListItemText primary={`${item.name}`} inset />
                       </ListItemButton>
                     </List>
                   ))
@@ -360,7 +366,7 @@ function DemoAPage() {
               <Collapse in={privateOpen} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
                   {onlineUsers.map(item => (
-                    <ListItemButton key={item.id} onClick={() => switchChannel(BroadCastType.PRIVATE, item.id)}>
+                    <ListItemButton key={item.id} onClick={() => switchChannel(BroadCastType.PRIVATE, item)}>
                       <ListItemText primary={item.name} inset />
                     </ListItemButton>
                   ))}
@@ -373,9 +379,13 @@ function DemoAPage() {
         <Grid item xs={12} md={10} style={{position: "relative"}}>
           <ChatList
             type={selectedBroadCast}
-            title={selectedTarget}
+            title={selectedTarget?.name}
             notice={notice}
-            messages={switchMessageView(selectedTarget)}
+            messages={switchMessageView(selectedTarget?.id)}
+            currentUser={{
+              userId: `${userId}`,
+              userName: `${userName}`
+            }}
           />
 
           <Box sx={{position: "absolute", bottom: 10, left: 20, right: 20, display: "flex"}}>
@@ -384,6 +394,12 @@ function DemoAPage() {
                 label="Message"
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault(); // 防止表單提交
+                    switchSendMessage();
+                  }
+                }}
                 fullWidth
             />
             <Button 

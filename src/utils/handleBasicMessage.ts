@@ -1,11 +1,12 @@
 import { MessageType } from "@/types";
 import dayjs from "dayjs";
+import { v4 as uuidv4 } from 'uuid';
 
-const handleBasicMessage = (fromUser: string, fromUserId: string, content: string): MessageType => {
+const handleBasicMessage = (fromUserName: string, fromUserId: string, content: string): MessageType => {
     const message: MessageType = {
-        fromUser,
+        fromUserName,
         fromUserId,
-        traceId: `${new Date().getTime()}`,
+        traceId: uuidv4(),
         content,
         createdTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
     };
