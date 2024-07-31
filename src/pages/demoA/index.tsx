@@ -46,8 +46,8 @@ function DemoAPage() {
   // 紀錄訊息列表：
   const [globalMessages, setGlobalMessages] = useState<MessageType[]>([]);
   const [groupMessages, setGroupMessages] = useState<GroupMessageListType>({});
-  console.log("🚀 ~ DemoAPage ~ groupMessages:", groupMessages)
   const [privateMessages, setPrivateMessages] = useState<PrivateMessageListType>({});
+  console.log("🚀 ~ DemoAPage ~ privateMessages:", privateMessages)
 
   // 切換聊天室
   const switchChannel = (type: BroadCastType, child?: BaseObject) => {
@@ -112,10 +112,10 @@ function DemoAPage() {
       const basicMessage = handleBasicMessage(`${userName}`, `${userId}`, currentMessage);
       const message: PrivateMessageType = {
         ...basicMessage,
-        // toUserName: currentGroup.name,
+        toUserName: selectedTarget?.name||"",
         toUserId: selectedTarget?.id||"",
       };
-      await connection.invoke('SendPrivateMessage', selectedTarget||"", message);
+      await connection.invoke('SendPrivateMessage', selectedTarget?.id||"", message);
 
       setCurrentMessage('');
     }catch(error){
@@ -195,6 +195,13 @@ function DemoAPage() {
       setPrivateMessages({
           [`${userId}`]: []
       });
+      setOnlineUsers([
+        {
+          id: `${userId}`,
+          name: `${userName}`,
+          groups: groupIds
+        }
+      ]);
     }
   }, [location.search])
 
@@ -224,9 +231,7 @@ function DemoAPage() {
 
     // 前端沒接收到
     const handleGroupMessage = (data: string) => {
-      console.log("🚀 ~ handleGroupMessage ~ data:", data)
       const record: GroupMessageType = JSON.parse(data);
-      console.log("🚀 ~ handleGroupMessage ~ record:", record)
 
       setGroupMessages(prev => {
         if(prev && prev[record.groupId]){
@@ -241,14 +246,16 @@ function DemoAPage() {
     };
 
     const handlePrivateMessage = (data: string) => {
+      console.log("🚀 ~ handlePrivateMessage ~ data:", data)
       const record: PrivateMessageType = JSON.parse(data);
+      console.log("🚀 ~ handlePrivateMessage ~ record:", record)
       setPrivateMessages(prev => {
-        if(prev && prev[record.fromUserId]){
+        if(prev && prev[record.toUserId]){
           prev[record.toUserId].push(record);
           return ({...prev});
         }
         else{
-          prev[record.fromUserId] = [record];
+          prev[record.toUserId] = [record];
           return ({...prev});
         }
       });
